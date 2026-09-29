@@ -3,6 +3,10 @@
 # ═══════════════════════════════════════════════════════════════
 FROM python:3.11-slim AS builder
 
+# Force Railway/Docker cache to rebuild from this point on.
+# Thay đổi giá trị này mỗi lần cần bust cache build.
+ARG CACHEBUST=1
+
 WORKDIR /install
 
 # Một số thư viện (vd cryptography) cần gcc để biên dịch wheel
@@ -27,6 +31,7 @@ RUN useradd --create-home --uid 10001 appuser
 COPY --from=builder /install /usr/local
 
 # Copy source SAU khi cài dependency để tận dụng cache
+ARG CACHEBUST=1
 COPY app ./app
 COPY utils ./utils
 COPY requirements.txt .
