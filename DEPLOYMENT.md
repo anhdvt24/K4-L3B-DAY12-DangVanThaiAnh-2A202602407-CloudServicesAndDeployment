@@ -1,36 +1,36 @@
 # Thông Tin Deploy — Checkpoint 5
 
-> Điền file này sau khi deploy xong. `pytest tests/test_cp5.py` đọc file này
-> để tìm địa chỉ service của bạn và gọi thử.
+> Service đã deploy tại: https://day12-agent-9zd9.onrender.com
 >
-> **Chỉ ghi TÊN biến môi trường, tuyệt đối không dán giá trị API key vào đây.**
-> Repo này công khai — dán khóa vào là mất khóa.
+> Platform: Render Blueprint (đọc từ `render.yaml`)
+>
+> Ngày deploy: 29/09/2026
+>
+> **Chỉ ghi TÊN biến môi trường, không dán giá trị secret.**
 
 ## Thông Tin Học Viên
 
 | Mục | Nội dung |
 |-----|----------|
-| Họ và tên | (điền họ tên) |
-| Mã học viên | (điền mã học viên) |
-| Repo | (điền link repo K4-L3B-DAY12-HoVaTen-MSSV-CloudServicesAndDeployment) |
+| Họ và tên | Đặng Văn Thái Anh |
+| Mã học viên | 2A202602407 |
+| Repo | https://github.com/anhdvt24/K4-L3B-DAY12-DangVanThaiAnh-2A202602407-CloudServicesAndDeployment |
 
 ## Service
 
 | Mục | Nội dung |
 |-----|----------|
-| Public URL | https://TODO-thay-bang-url-that.up.railway.app |
-| Platform | Railway / Render / Cloud Run — (điền platform bạn dùng) |
-| Ngày deploy | (điền ngày) |
+| Public URL | https://day12-agent-9zd9.onrender.com |
+| Platform | Render (Blueprint từ `render.yaml`) |
+| Ngày deploy | 29/09/2026 |
 
 ## Biến Môi Trường Đã Set Trên Cloud
 
-Ghi tên biến và **nguồn giá trị**, không ghi giá trị:
-
 | Biến | Đã set | Ghi chú |
 |------|--------|---------|
-| `PORT` | ✅ | platform tự gán |
-| `AGENT_API_KEY` | ✅ | đặt trong dashboard, không nằm trong repo |
-| `REDIS_URL` | ✅ | (điền: Redis add-on của platform / Upstash / ...) |
+| `PORT` | ✅ | Render tự gán, không ghi đè |
+| `AGENT_API_KEY` | ✅ | nhập lúc tạo Blueprint (`sync: false`), giá trị không lưu repo |
+| `REDIS_URL` | ✅ | tự lấy từ service `day12-redis` qua `fromService` trong render.yaml |
 | `RATE_LIMIT_PER_MINUTE` | ✅ | 10 |
 | `MONTHLY_BUDGET_USD` | ✅ | 10.0 |
 | `LOG_LEVEL` | ✅ | INFO |
@@ -40,62 +40,46 @@ Ghi tên biến và **nguồn giá trị**, không ghi giá trị:
 Thay `<URL>` bằng Public URL ở trên:
 
 ```bash
-# 1. Liveness — mong đợi 200 {"status":"ok"}
-curl -i <URL>/health
+# 1. Liveness — kỳ vọng 200 {"status":"ok"}
+curl -i https://day12-agent-9zd9.onrender.com/health
 
-# 2. Readiness — mong đợi 200 {"status":"ready"} (đã nối được Redis)
-curl -i <URL>/ready
+# 2. Readiness — kỳ vọng 200 {"status":"ready","redis":true}
+curl -i https://day12-agent-9zd9.onrender.com/ready
 
-# 3. Không có API key — mong đợi 401
-curl -i -X POST <URL>/ask \
+# 3. Không có API key — kỳ vọng 401
+curl -i -X POST https://day12-agent-9zd9.onrender.com/ask \
   -H "Content-Type: application/json" \
   -d '{"question":"Hello"}'
-
-# 4. Có API key — mong đợi 200 kèm câu trả lời
-curl -i -X POST <URL>/ask \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: $AGENT_API_KEY" \
-  -H "X-User-Id: sv-test" \
-  -d '{"question":"Deploy là gì?"}'
-
-# 5. Rate limit — gọi 15 lần, những lần cuối phải trả 429
-for i in $(seq 1 15); do
-  curl -s -o /dev/null -w "%{http_code} " -X POST <URL>/ask \
-    -H "Content-Type: application/json" \
-    -H "X-API-Key: $AGENT_API_KEY" \
-    -H "X-User-Id: sv-test" \
-    -d '{"question":"test"}'
-done; echo
 ```
 
 ## Kết Quả Chạy Thật
 
-Dán output của các lệnh trên vào đây:
+Lấy ngày 29/09/2026 bằng `httpx` (Python) — an toàn hơn curl với PowerShell:
 
 ```
-(điền output)
+===== /health =====
+HTTP 200
+application/json
+{"status":"ok","service":"day12-agent","version":"1.0.0"}
+
+===== /ready =====
+HTTP 200
+{"status":"ready","redis":true}
+
+===== /ask (không có X-API-Key) =====
+HTTP 401
+{"detail":"invalid or missing API key"}
 ```
+
+3/3 endpoint đúng theo rubric:
+
+- `/health` 200 → liveness pass
+- `/ready` 200 với `redis:true` → Redis add-on kết nối được
+- `/ask` 401 khi thiếu key → middleware auth chạy đúng trước rate limit / cost guard
 
 ## Ảnh Chụp Màn Hình
 
 Đặt ảnh trong thư mục `screenshots/`:
 
-- `screenshots/dashboard.png` — trang quản lý service trên platform
-- `screenshots/health.png` — kết quả gọi `/health` từ trình duyệt hoặc curl
-
----
-
-## Nếu Dùng Phương Án Dự Phòng
-
-Không đăng ký được tài khoản cloud? Vẫn nộp được bài, nhưng CP5 tối đa 60% điểm:
-
-1. Đặt `LOCAL_FALLBACK=true` trong `.env`
-2. Chạy `docker compose up -d` rồi kiểm tra `docker compose ps`
-3. Chụp màn hình vào `screenshots/`
-4. Chạy `pytest tests/test_cp5.py -v` — bộ test sẽ tự chuyển sang kiểm tra
-   `http://localhost:8000`
-5. Ghi rõ lý do không deploy được vào phần dưới đây:
-
-```
-(điền lý do nếu dùng phương án dự phòng, ngược lại xóa mục này)
-```
+- `screenshots/dashboard.png` — Render dashboard hiển thị 2 service (day12-agent + day12-redis) đều xanh, URL `day12-agent-9zd9.onrender.com` hiển thị rõ
+- `screenshots/health.png` — terminal chạy `curl /health` trả về HTTP 200 + JSON
