@@ -26,8 +26,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run pytest (skip CP5 which needs live deploy)
-        run: pytest tests/ -v --ignore=tests/test_cp5.py
+      - name: Run pytest (skip CP5 which needs live deploy; skip bonus self-test to avoid bootstrap loop)
+        run: pytest tests/ -v --ignore=tests/test_cp5.py --ignore=tests/test_bonus_cicd.py
 
   build:
     name: Build Docker image
